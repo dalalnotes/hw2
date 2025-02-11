@@ -100,3 +100,110 @@ puts ""
 
 # Query the cast data and loop through the results to display the cast output for each movie.
 # TODO!
+
+# db/migrate/XXXX_create_movies.rb
+class CreateMovies < ActiveRecord::Migration[7.0]
+    def change
+      create_table :movies do |t|
+        t.string :title
+        t.integer :year
+        t.string :rating
+        t.string :studio
+        t.timestamps
+      end
+    end
+  end
+  
+  # db/migrate/XXXX_create_actors.rb
+  class CreateActors < ActiveRecord::Migration[7.0]
+    def change
+      create_table :actors do |t|
+        t.string :name
+        t.timestamps
+      end
+    end
+  end
+  
+  # db/migrate/XXXX_create_roles.rb
+  class CreateRoles < ActiveRecord::Migration[7.0]
+    def change
+      create_table :roles do |t|
+        t.references :movie, foreign_key: true
+        t.references :actor, foreign_key: true
+        t.string :character_name
+        t.timestamps
+      end
+    end
+  end
+  
+  # app/models/movie.rb
+  class Movie < ApplicationRecord
+    has_many :roles
+    has_many :actors, through: :roles
+  end
+  
+  # app/models/actor.rb
+  class Actor < ApplicationRecord
+    has_many :roles
+    has_many :movies, through: :roles
+  end
+  
+  # app/models/role.rb
+  class Role < ApplicationRecord
+    belongs_to :movie
+    belongs_to :actor
+  end
+  
+  # db/seeds.rb
+  Movie.destroy_all
+  Actor.destroy_all
+  Role.destroy_all
+  
+  movies_data = [
+    { title: "Batman Begins", year: 2005, rating: "PG-13", studio: "Warner Bros." },
+    { title: "The Dark Knight", year: 2008, rating: "PG-13", studio: "Warner Bros." },
+    { title: "The Dark Knight Rises", year: 2012, rating: "PG-13", studio: "Warner Bros." }
+  ]
+  
+  actors_data = [
+    "Christian Bale", "Michael Caine", "Liam Neeson", "Katie Holmes", "Gary Oldman",
+    "Heath Ledger", "Aaron Eckhart", "Maggie Gyllenhaal", "Tom Hardy", "Joseph Gordon-Levitt", "Anne Hathaway"
+  ]
+  
+  roles_data = [
+    ["Batman Begins", "Christian Bale", "Bruce Wayne"],
+    ["Batman Begins", "Michael Caine", "Alfred"],
+    ["Batman Begins", "Liam Neeson", "Ra's Al Ghul"],
+    ["Batman Begins", "Katie Holmes", "Rachel Dawes"],
+    ["Batman Begins", "Gary Oldman", "Commissioner Gordon"],
+    ["The Dark Knight", "Christian Bale", "Bruce Wayne"],
+    ["The Dark Knight", "Heath Ledger", "Joker"],
+    ["The Dark Knight", "Aaron Eckhart", "Harvey Dent"],
+    ["The Dark Knight", "Michael Caine", "Alfred"],
+    ["The Dark Knight", "Maggie Gyllenhaal", "Rachel Dawes"],
+    ["The Dark Knight Rises", "Christian Bale", "Bruce Wayne"],
+    ["The Dark Knight Rises", "Gary Oldman", "Commissioner Gordon"],
+    ["The Dark Knight Rises", "Tom Hardy", "Bane"],
+    ["The Dark Knight Rises", "Joseph Gordon-Levitt", "John Blake"],
+    ["The Dark Knight Rises", "Anne Hathaway", "Selina Kyle"]
+  ]
+  
+  movies = movies_data.map { |data| Movie.create!(data) }
+  actors = actors_data.map { |name| [name, Actor.create!(name: name)] }.to_h
+  roles_data.each do |movie_title, actor_name, character_name|
+    Role.create!(movie: Movie.find_by(title: movie_title), actor: actors[actor_name], character_name: character_name)
+  end
+  
+  # script/report.rb
+  puts "Movies"
+  puts "======"
+  Movie.order(:year).each do |movie|
+    puts "#{movie.title.ljust(25)} #{movie.year}  #{movie.rating}  #{movie.studio}"
+  end
+  
+  puts "\nTop Cast"
+  puts "========"
+  Role.includes(:movie, :actor).order('movies.year').each do |role|
+    puts "#{role.movie.title.ljust(25)} #{role.actor.name.ljust(20)} #{role.character_name}"
+  end
+  
